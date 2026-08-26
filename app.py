@@ -5,10 +5,10 @@ import os
 import traceback
 
 app = Flask(__name__)
-CORS(app)  # Cho phép mọi nguồn gọi API không bị chặn CORS
+CORS(app)
 
 @app.route('/api', methods=['GET'])
-@app.route('/api/', methods=['GET'])  # Hỗ trợ cả trường hợp có hoặc không có dấu / ở cuối
+@app.route('/api/', methods=['GET'])
 def get_tiktok_link():
     tiktok_url = request.args.get('url')
     if not tiktok_url:
@@ -19,6 +19,9 @@ def get_tiktok_link():
         'format': 'best',
         'quiet': True,
         'no_warnings': True,
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        }
     }
     if os.path.exists(cookie_path):
         ydl_opts['cookiefile'] = cookie_path
