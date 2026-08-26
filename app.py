@@ -1,9 +1,10 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import yt_dlp
+import os
 
 app = Flask(__name__)
-CORS(app)  # Kích hoạt CORS cho phép extension gọi API thoải mái
+CORS(app)
 
 @app.route('/api', methods=['GET'])
 def get_tiktok_link():
@@ -11,12 +12,15 @@ def get_tiktok_link():
     if not tiktok_url:
         return jsonify({"code": 1, "message": "Thiếu tham số url!"}), 400
 
+    # Kiểm tra xem có file cookies.txt không
+    cookie_path = 'cookies.txt'
     ydl_opts = {
         'format': 'best',
         'quiet': True,
         'no_warnings': True,
-        'extract_flat': False,
     }
+    if os.path.exists(cookie_path):
+        ydl_opts['cookiefile'] = cookie_path
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
