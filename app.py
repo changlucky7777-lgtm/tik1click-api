@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import yt_dlp
 import os
+import tempfile
 import traceback
 
 app = Flask(__name__)
@@ -14,7 +15,12 @@ def get_tiktok_link():
     if not tiktok_url:
         return jsonify({"code": 1, "message": "Thiếu tham số url!"}), 400
 
-    cookie_path = 'cookies.txt'
+    # Lấy chuỗi cookie động do Extension từ trình duyệt người dùng truyền lên qua Header
+    dynamic_cookie_string = request.headers.get('X-TikTok-Cookie')
+    
+    cookie_file_path = None
+    cookie_path = 'cookies.txt' # Fallback phòng hờ nếu vẫn dùng file tĩnh
+    
     ydl_opts = {
         'format': 'bv*[vcodec^=avc]+ba/b',  # Ép chọn chuẩn H.264/AVC tương thích 100% với thẻ video HTML5 trên trình duyệt
         'quiet': True,
@@ -24,7 +30,23 @@ def get_tiktok_link():
             'Referer': 'https://www.tiktok.com/'
         }
     }
-    if os.path.exists(cookie_path):
+
+    # Ưu tiên sử dụng cookie động từ người dùng truyền lên
+    if dynamic_cookie_string:
+        try:
+            fd, cookie_file_path = tempfile.mkstemp(suffix='.txt')
+            with os.fdopen(fd, 'w', encoding='utf-8') as f:
+                f.write("# Netscape HTTP Cookie File\n")
+                for item in dynamic_cookie_string.split('; '):
+                    if '=' in item:
+                        parts = item.split('=', 1)
+                        name, value = parts[0].strip(), parts[1].strip()
+                        f.write(f".tiktok.com\tTRUE\t/\tTRUE\t0\t{name}\t{value}\n")
+            ydl_opts['cookiefile'] = cookie_file_path
+        except Exception as e:
+            print("Lỗi tạo cookie tạm thời:", e)
+    elif os.path.exists(cookie_path):
+        # Nếu không có cookie động thì dùng tạm file cookies.txt sẵn có trên server (nếu còn)
         ydl_opts['cookiefile'] = cookie_path
 
     try:
@@ -60,6 +82,14 @@ def get_tiktok_link():
     except Exception as e:
         traceback.print_exc()
         return jsonify({"code": 1, "message": str(e)}), 500
+
+    finally:
+        # Dọn dẹp file cookie tạm thời trên RAM/Disk của server sau khi xử lý xong
+        if cookie_file_path and os.path.exists(cookie_file_path):
+            try:
+                os.remove(cookie_file_path)
+            except:
+                pass
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
