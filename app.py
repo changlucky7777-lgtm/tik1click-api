@@ -16,11 +16,12 @@ def get_tiktok_link():
 
     cookie_path = 'cookies.txt'
     ydl_opts = {
-        'format': 'best',
+        'format': 'bv*[vcodec^=avc]+ba/b',  # Ép chọn chuẩn H.264/AVC tương thích 100% với thẻ video HTML5 trên trình duyệt
         'quiet': True,
         'no_warnings': True,
         'http_headers': {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Referer': 'https://www.tiktok.com/'
         }
     }
     if os.path.exists(cookie_path):
@@ -34,7 +35,13 @@ def get_tiktok_link():
             if 'url' in info:
                 video_url = info['url']
             elif 'formats' in info and len(info['formats']) > 0:
-                video_url = info['formats'][-1].get('url')
+                # Lấy định dạng tốt nhất có hỗ trợ video đầy đủ
+                for f in info['formats']:
+                    if f.get('vcodec') != 'none' and f.get('acodec') != 'none' and f.get('ext') == 'mp4':
+                        video_url = f.get('url')
+                        break
+                if not video_url:
+                    video_url = info['formats'][-1].get('url')
                 
             video_id = info.get('id', 'unknown')
 
