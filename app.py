@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import yt_dlp
 import os
+import traceback
 
 app = Flask(__name__)
 CORS(app)
@@ -12,7 +13,6 @@ def get_tiktok_link():
     if not tiktok_url:
         return jsonify({"code": 1, "message": "Thiếu tham số url!"}), 400
 
-    # Kiểm tra xem có file cookies.txt không
     cookie_path = 'cookies.txt'
     ydl_opts = {
         'format': 'best',
@@ -25,7 +25,15 @@ def get_tiktok_link():
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(tiktok_url, download=False)
-            video_url = info.get('url') or info.get('formats')[0].get('url')
+            
+            # Thử lấy link video từ nhiều trường dữ liệu khác nhau của yt-dlp
+            video_url = None
+            if 'url' in info:
+                video_url = info['url']
+            elif 'formats' in info and len(info['formats']) > 0:
+                # Lấy định dạng tốt nhất có sẵn
+                video_url = info['formats'][-1].get('url')
+                
             video_id = info.get('id', 'unknown')
 
             if video_url:
@@ -38,9 +46,11 @@ def get_tiktok_link():
                     }
                 })
             else:
-                return jsonify({"code": 1, "message": "Không tìm thấy đường dẫn video!"}), 404
+                return jsonify({"code": 1, "message": "Không tìm thấy đường dẫn video từ yt-dlp!"}), 404
 
     except Exception as e:
+        # In lỗi chi tiết ra log của Render để dễ dàng theo dõi nếu có vấn đề
+        traceback.print_exc()
         return jsonify({"code": 1, "message": str(e)}), 500
 
 if __name__ == '__main__':
