@@ -5,9 +5,10 @@ import os
 import traceback
 
 app = Flask(__name__)
-CORS(app)
+CORS(app)  # Cho phép mọi nguồn gọi API không bị chặn CORS
 
 @app.route('/api', methods=['GET'])
+@app.route('/api/', methods=['GET'])  # Hỗ trợ cả trường hợp có hoặc không có dấu / ở cuối
 def get_tiktok_link():
     tiktok_url = request.args.get('url')
     if not tiktok_url:
@@ -26,12 +27,10 @@ def get_tiktok_link():
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(tiktok_url, download=False)
             
-            # Thử lấy link video từ nhiều trường dữ liệu khác nhau của yt-dlp
             video_url = None
             if 'url' in info:
                 video_url = info['url']
             elif 'formats' in info and len(info['formats']) > 0:
-                # Lấy định dạng tốt nhất có sẵn
                 video_url = info['formats'][-1].get('url')
                 
             video_id = info.get('id', 'unknown')
@@ -49,7 +48,6 @@ def get_tiktok_link():
                 return jsonify({"code": 1, "message": "Không tìm thấy đường dẫn video từ yt-dlp!"}), 404
 
     except Exception as e:
-        # In lỗi chi tiết ra log của Render để dễ dàng theo dõi nếu có vấn đề
         traceback.print_exc()
         return jsonify({"code": 1, "message": str(e)}), 500
 
